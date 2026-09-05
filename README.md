@@ -217,7 +217,7 @@ function NotificationCenter() {
 
 ## API Reference
 
-### `<ToastProvider>` Props
+### `<Toaster />` & `<ToastProvider>` Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
