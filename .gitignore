@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# production output
+dist/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment and os files
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# coverage and test output
+coverage/
+.vitest/
