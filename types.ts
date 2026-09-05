@@ -17,6 +17,16 @@ export type ToastVariant =
   | "warning"
   | "loading";
 
+// custom coordinate offset options for viewports and toasts
+export interface ToastOffsetOptions {
+  top?: number | string;
+  bottom?: number | string;
+  left?: number | string;
+  right?: number | string;
+  x?: number | string;
+  y?: number | string;
+}
+
 // every visual customization option exposed to the consumer.
 // all of these end up resolved into a single inline style object,
 // after passing through the sanitizer for any raw css-value strings.
@@ -37,12 +47,18 @@ export interface ToastStyleOptions {
   boxShadow?: string;
   padding?: number | string;
   progressColor?: string;
+  top?: number | string;
+  bottom?: number | string;
+  left?: number | string;
+  right?: number | string;
+  transform?: string;
 }
 
 export interface ToastOptions extends ToastStyleOptions {
   id?: string | number;
   variant?: ToastVariant;
   position?: ToastPosition;
+  offset?: ToastOffsetOptions;
   duration?: number; // ms; use infinity to persist until closed manually
   closable?: boolean; // show the dismiss button, default true
   progressBar?: boolean; // show the animated progress countdown bar, default false
@@ -59,6 +75,7 @@ export interface ToastRecord
   message: ReactNode;
   description?: ReactNode;
   progressBar?: boolean;
+  offset?: ToastOffsetOptions;
   isLeaving?: boolean;
   icon?: ReactNode;
   onClose?: () => void;
@@ -71,6 +88,11 @@ export interface ToastProviderProps {
   defaultDuration?: number;
   defaultProgressBar?: boolean;
   gap?: number; // px gap between stacked toasts
+  offset?: ToastOffsetOptions;
+  top?: number | string;
+  bottom?: number | string;
+  left?: number | string;
+  right?: number | string;
 }
 
 export interface PromiseToastMessages<T> {
@@ -78,3 +100,4 @@ export interface PromiseToastMessages<T> {
   success: ReactNode | ((data: T) => ReactNode);
   error: ReactNode | ((err: unknown) => ReactNode);
 }
+

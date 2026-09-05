@@ -1,14 +1,26 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { ToastOptions, ToastProviderProps, ToastRecord } from "./types";
+import type {
+  ToastOptions,
+  ToastProviderProps,
+  ToastRecord,
+  ToastPosition,
+  ToastOffsetOptions,
+} from "./types";
 import { registerToastHandlers } from "./toastStore";
 
-interface ToastContextValue {
+export interface ToastContextValue {
   toasts: ToastRecord[];
   add: (message: ReactNode, options?: ToastOptions) => string | number;
   remove: (id: string | number) => void;
   removeAll: () => void;
   gap: number;
+  defaultPosition: ToastPosition;
+  offset?: ToastOffsetOptions;
+  top?: number | string;
+  bottom?: number | string;
+  left?: number | string;
+  right?: number | string;
 }
 
 export const ToastContext = createContext<ToastContextValue | null>(null);
@@ -16,7 +28,7 @@ export const ToastContext = createContext<ToastContextValue | null>(null);
 let localIdCounter = 0;
 function generateId(): string {
   localIdCounter += 1;
-  return `shalua-${Date.now()}-${localIdCounter}`;
+  return `ztoast-${Date.now()}-${localIdCounter}`;
 }
 
 export function ToastProvider({
@@ -25,6 +37,11 @@ export function ToastProvider({
   defaultDuration = 4000,
   defaultProgressBar = false,
   gap = 12,
+  offset,
+  top,
+  bottom,
+  left,
+  right,
 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
   const timers = useRef<Map<string | number, ReturnType<typeof setTimeout>>>(new Map());
@@ -93,6 +110,12 @@ export function ToastProvider({
         isLeaving: false,
         icon: options.icon,
         onClose: options.onClose,
+        offset: options.offset,
+        top: options.top,
+        bottom: options.bottom,
+        left: options.left,
+        right: options.right,
+        transform: options.transform,
         width: options.width,
         height: options.height,
         background: options.background,
@@ -141,8 +164,20 @@ export function ToastProvider({
   }, [add, remove, removeAll]);
 
   const value = useMemo(
-    () => ({ toasts, add, remove, removeAll, gap }),
-    [toasts, add, remove, removeAll, gap]
+    () => ({
+      toasts,
+      add,
+      remove,
+      removeAll,
+      gap,
+      defaultPosition,
+      offset,
+      top,
+      bottom,
+      left,
+      right,
+    }),
+    [toasts, add, remove, removeAll, gap, defaultPosition, offset, top, bottom, left, right]
   );
 
   return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;

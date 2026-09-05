@@ -1,4 +1,4 @@
-# shalua
+# ztoast
 
 A modern, lightweight, and zero-runtime-dependency toast notification library for React. Built with a sleek popover design aesthetic, animated countdown progress bars with synchronized pause-on-hover timers, async promise management, and strict CSS injection sanitization.
 
@@ -20,7 +20,7 @@ A modern, lightweight, and zero-runtime-dependency toast notification library fo
 ## Installation
 
 ```bash
-npm install shalua
+npm install ztoast
 ```
 
 ---
@@ -33,7 +33,7 @@ You only need to mount `<Toaster />` **once** at the root of your app (e.g. `App
 
 ```tsx
 import React from "react";
-import { Toaster, toast } from "shalua";
+import { Toaster, toast } from "ztoast";
 
 export function App() {
   return (
@@ -62,7 +62,7 @@ function MainContent() {
 
 ### 1. Notification Variants & Descriptions
 
-shalua provides built-in variants with clean inline SVG icons:
+ztoast provides built-in variants with clean inline SVG icons:
 
 ```tsx
 // success notification with secondary description
@@ -125,7 +125,7 @@ To enable the progress bar on all toasts by default:
 Track promises and update toasts in place from loading to success or failure:
 
 ```tsx
-import { toast } from "shalua";
+import { toast } from "ztoast";
 
 async function handleDeploy() {
   await toast.promise(
@@ -147,10 +147,10 @@ async function handleDeploy() {
 
 ### 4. Calling Outside React Components
 
-Because shalua uses a module-level imperative store, you can trigger toasts directly inside API utility files, event listeners, or Axios/Fetch interceptors:
+Because ztoast uses a module-level imperative store, you can trigger toasts directly inside API utility files, event listeners, or Axios/Fetch interceptors:
 
 ```ts
-import { toast } from "shalua";
+import { toast } from "ztoast";
 
 export async function apiClient(endpoint: string, options?: RequestInit) {
   try {
@@ -194,12 +194,50 @@ toast.show("Custom announcement", {
 
 ---
 
-### 6. Hook Usage (`useToast`)
+### 6. Custom Positioning & Coordinates (e.g. `top: "50vh"`, Offsets)
+
+You can position toasts at arbitrary viewport coordinates using `top`, `bottom`, `left`, `right`, `transform`, or the structured `offset` property:
+
+```tsx
+// center vertically on the screen at 50vh
+toast.info("Centered notification", {
+  position: "top-center",
+  top: "50vh",
+});
+
+// custom coordinate offsets
+toast.success("Custom offset from corner", {
+  position: "bottom-right",
+  offset: {
+    bottom: "40px",
+    right: "32px",
+  },
+});
+
+// exact custom placement with transform
+toast.show("Middle of screen", {
+  top: "50vh",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+});
+```
+
+You can also define default coordinates globally on `<Toaster />`:
+```tsx
+<Toaster
+  defaultPosition="top-center"
+  top="50vh"
+/>
+```
+
+---
+
+### 7. Hook Usage (`useToast`)
 
 For programmatic access to active toast state or bulk operations inside components:
 
 ```tsx
-import { useToast } from "shalua";
+import { useToast } from "ztoast";
 
 function NotificationCenter() {
   const { toasts, dismiss, dismissAll } = useToast();
@@ -225,6 +263,8 @@ function NotificationCenter() {
 | `defaultDuration` | `number` | `4000` | Auto-dismiss duration in milliseconds |
 | `defaultProgressBar` | `boolean` | `false` | Enable countdown progress bar on all toasts by default |
 | `gap` | `number` | `12` | Pixel spacing between stacked toasts |
+| `offset` | `ToastOffsetOptions` | `undefined` | Custom default coordinate offsets (`top`, `bottom`, `left`, `right`, `x`, `y`) |
+| `top` / `bottom` / `left` / `right` | `number \| string` | `undefined` | Custom default screen coordinate offsets (e.g. `"50vh"`, `"24px"`, `32`) |
 
 ### `ToastOptions`
 
@@ -232,6 +272,9 @@ function NotificationCenter() {
 |---|---|---|---|
 | `description` | `ReactNode` | `undefined` | Secondary text or element beneath the main title |
 | `position` | `ToastPosition` | `"top-right"` | Anchor position in the viewport |
+| `offset` | `ToastOffsetOptions` | `undefined` | Structured coordinate offsets (`top`, `bottom`, `left`, `right`, `x`, `y`) |
+| `top` / `bottom` / `left` / `right` | `number \| string` | `undefined` | Specific viewport placement coordinates (e.g. `"50vh"`, `"100px"`, `20`) |
+| `transform` | `string` | `undefined` | Custom CSS transform (e.g. `"translate(-50%, -50%)"`, `"translateX(-50%)"`) |
 | `duration` | `number` | `4000` | Auto-dismiss time in ms. Set to `Infinity` for persistent toasts |
 | `progressBar` | `boolean` | `false` | Displays the synchronized progress countdown bar |
 | `progressColor` | `string` | `undefined` | Custom color for the progress bar fill |
@@ -254,7 +297,7 @@ function NotificationCenter() {
 
 ## Security
 
-shalua validates all raw style string inputs (`background`, `backgroundGradient`, `backgroundImage`, `fontFamily`, `border`, `borderColor`, `boxShadow`, `progressColor`) against strict allowlists before applying them. Any values containing unsafe patterns (such as `javascript:`, `expression()`, `@import`, or `<script>`) are automatically and silently dropped to prevent CSS injection.
+ztoast validates all raw style string inputs (`background`, `backgroundGradient`, `backgroundImage`, `fontFamily`, `border`, `borderColor`, `boxShadow`, `progressColor`, `top`, `bottom`, `left`, `right`, `transform`) against strict allowlists before applying them. Any values containing unsafe patterns (such as `javascript:`, `expression()`, `@import`, or `<script>`) are automatically and silently dropped to prevent CSS injection.
 
 ---
 

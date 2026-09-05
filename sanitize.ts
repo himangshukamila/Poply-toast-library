@@ -137,7 +137,7 @@ export function sanitizeBorderShorthand(input: string | undefined): SanitizeResu
   return reject();
 }
 
-// validates a plain numeric-with-unit css value, e.g. width/height/padding/borderradius
+// validates a plain numeric-with-unit css value, e.g. width, height, padding, borderradius, top, left, or offsets
 export function sanitizeDimension(input: number | string | undefined): SanitizeResult {
   if (input == null) return accept(undefined as unknown as string);
   if (typeof input === "number") {
@@ -145,7 +145,24 @@ export function sanitizeDimension(input: number | string | undefined): SanitizeR
   }
   const value = normalize(input);
   if (!value || containsForbidden(value)) return reject();
-  if (/^[0-9.]+(px|em|rem|%|vh|vw)$/.test(value) || value === "auto") return accept(value);
+  if (/^-?[0-9.]+(px|em|rem|%|vh|vw|vmin|vmax|dvh|svh|lvh)$/.test(value) || value === "auto" || value === "0") {
+    return accept(value);
+  }
+  if (/^calc\(\s*[-0-9.a-zA-Z%+\s/*()]+\s*\)$/.test(value)) {
+    return accept(value);
+  }
+  return reject();
+}
+
+// validates a css transform string such as translate, scale, or rotate
+const TRANSFORM_PATTERN =
+  /^(translate|translateX|translateY|translate3d|scale|scaleX|scaleY|scale3d|rotate|rotateX|rotateY|rotateZ|matrix)\(\s*[-0-9.a-zA-Z%,\s()]+\s*\)(\s+(translate|translateX|translateY|translate3d|scale|scaleX|scaleY|scale3d|rotate|rotateX|rotateY|rotateZ|matrix)\(\s*[-0-9.a-zA-Z%,\s()]+\s*\))*$/;
+
+export function sanitizeTransform(input: string | undefined): SanitizeResult {
+  if (input == null) return accept(undefined as unknown as string);
+  const value = normalize(input);
+  if (!value || containsForbidden(value)) return reject();
+  if (TRANSFORM_PATTERN.test(value)) return accept(value);
   return reject();
 }
 
@@ -157,3 +174,4 @@ export function sanitizeBoxShadow(input: string | undefined): SanitizeResult {
   if (/^[a-zA-Z0-9#%.,\s()-]+$/.test(value)) return accept(value);
   return reject();
 }
+

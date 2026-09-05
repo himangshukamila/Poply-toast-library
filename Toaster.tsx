@@ -14,6 +14,11 @@ export function Toaster({
   defaultDuration = 4000,
   defaultProgressBar = false,
   gap = 12,
+  offset,
+  top,
+  bottom,
+  left,
+  right,
 }: ToasterProps) {
   return (
     <ToastProvider
@@ -21,6 +26,11 @@ export function Toaster({
       defaultDuration={defaultDuration}
       defaultProgressBar={defaultProgressBar}
       gap={gap}
+      offset={offset}
+      top={top}
+      bottom={bottom}
+      left={left}
+      right={right}
     >
       {children}
       <ToastViewport />

@@ -139,7 +139,7 @@ describe("ZNotify Toast integration", () => {
     });
 
     expect(screen.getByText("timed notification")).toBeTruthy();
-    expect(screen.getByTestId("shalua-progress-track")).toBeTruthy();
+    expect(screen.getByTestId("ztoast-progress-track")).toBeTruthy();
   });
 
   it("works with all-in-one Toaster component", () => {
@@ -154,6 +154,73 @@ describe("ZNotify Toast integration", () => {
     });
 
     expect(screen.getByText("using toaster component")).toBeTruthy();
-    expect(screen.getByTestId("shalua-progress-track")).toBeTruthy();
+    expect(screen.getByTestId("ztoast-progress-track")).toBeTruthy();
+  });
+
+  it("renders a toast with custom positioning coordinates like top 50vh", () => {
+    render(
+      <ToastProvider>
+        <ToastViewport />
+      </ToastProvider>
+    );
+
+    act(() => {
+      toast.info("custom centered position", {
+        top: "50vh",
+        position: "top-center",
+      });
+    });
+
+    const toastElement = screen.getByText("custom centered position");
+    expect(toastElement).toBeTruthy();
+
+    const viewportContainer = toastElement.closest("div[style*='position: fixed']") as HTMLElement;
+    expect(viewportContainer).toBeTruthy();
+    expect(viewportContainer.style.top).toBe("50vh");
+    expect(viewportContainer.style.left).toBe("50%");
+    expect(viewportContainer.style.transform).toBe("translateX(-50%)");
+  });
+
+  it("supports custom offset object on toast invocation", () => {
+    render(
+      <ToastProvider>
+        <ToastViewport />
+      </ToastProvider>
+    );
+
+    act(() => {
+      toast.success("custom offset toast", {
+        position: "bottom-right",
+        offset: { bottom: "40px", right: "32px" },
+      });
+    });
+
+    const toastElement = screen.getByText("custom offset toast");
+    expect(toastElement).toBeTruthy();
+
+    const viewportContainer = toastElement.closest("div[style*='position: fixed']") as HTMLElement;
+    expect(viewportContainer).toBeTruthy();
+    expect(viewportContainer.style.bottom).toBe("40px");
+    expect(viewportContainer.style.right).toBe("32px");
+  });
+
+  it("supports global positioning offsets on Toaster component", () => {
+    render(
+      <div>
+        <Toaster defaultPosition="top-center" top="30vh" />
+      </div>
+    );
+
+    act(() => {
+      toast.warning("inherits toaster position");
+    });
+
+    const toastElement = screen.getByText("inherits toaster position");
+    expect(toastElement).toBeTruthy();
+
+    const viewportContainer = toastElement.closest("div[style*='position: fixed']") as HTMLElement;
+    expect(viewportContainer).toBeTruthy();
+    expect(viewportContainer.style.top).toBe("30vh");
   });
 });
+

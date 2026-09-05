@@ -6,6 +6,7 @@ import {
   sanitizeFontFamily,
   sanitizeBorderShorthand,
   sanitizeDimension,
+  sanitizeTransform,
   sanitizeBoxShadow,
 } from "./sanitize";
 
@@ -106,10 +107,28 @@ describe("sanitizeDimension", () => {
     expect(sanitizeDimension(20).value).toBe("20px");
     expect(sanitizeDimension("300px").value).toBe("300px");
     expect(sanitizeDimension("50%").value).toBe("50%");
+    expect(sanitizeDimension("50vh").value).toBe("50vh");
+    expect(sanitizeDimension("100vw").value).toBe("100vw");
+    expect(sanitizeDimension("10dvh").value).toBe("10dvh");
+    expect(sanitizeDimension("calc(100vh - 20px)").value).toBe("calc(100vh - 20px)");
+    expect(sanitizeDimension("0").value).toBe("0");
     expect(sanitizeDimension("auto").value).toBe("auto");
     expect(sanitizeDimension(NaN).rejected).toBe(true);
-    expect(sanitizeDimension("100vw").rejected).toBe(false);
     expect(sanitizeDimension("100px; color: red").rejected).toBe(true);
+  });
+});
+
+describe("sanitizeTransform", () => {
+  it("allows safe css transform strings", () => {
+    expect(sanitizeTransform("translateX(-50%)").rejected).toBe(false);
+    expect(sanitizeTransform("translate(-50%, -50%)").rejected).toBe(false);
+    expect(sanitizeTransform("scale(1.05)").rejected).toBe(false);
+    expect(sanitizeTransform("rotate(45deg)").rejected).toBe(false);
+  });
+
+  it("rejects dangerous or malformed transform strings", () => {
+    expect(sanitizeTransform("javascript:alert(1)").rejected).toBe(true);
+    expect(sanitizeTransform("translate(0); evil: 1").rejected).toBe(true);
   });
 });
 
@@ -125,3 +144,4 @@ describe("sanitizeBoxShadow", () => {
     expect(sanitizeBoxShadow("0 4px 12px #000; color: red").rejected).toBe(true);
   });
 });
+

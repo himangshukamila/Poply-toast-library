@@ -274,7 +274,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
 
       {toast.progressBar && toast.duration !== Infinity && (
         <div
-          data-testid="shalua-progress-track"
+          data-testid="ztoast-progress-track"
           style={{
             position: "absolute",
             bottom: 0,
