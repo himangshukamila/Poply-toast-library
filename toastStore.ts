@@ -21,7 +21,7 @@ export function registerToastHandlers(next: ToastHandlers | null): void {
 function warnNotMounted(): void {
   // eslint-disable-next-line no-console
   console.warn(
-    "[poply] toast() was called before a <ToastProvider> mounted. " +
+    "[shalua] toast() was called before a <ToastProvider> mounted. " +
       "Wrap your app in <ToastProvider> to enable toasts."
   );
 }

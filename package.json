@@ -1,6 +1,6 @@
 {
-  "name": "poply",
-  "version": "0.1.0",
+  "name": "shalua",
+  "version": "0.1.1",
   "description": "A modern, zero-runtime-dependency toast notification library for React with progress bars, popover themes, and CSS sanitization.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -47,7 +47,7 @@
     "notification",
     "toaster",
     "alert",
-    "poply",
+    "shalua",
     "progress-bar",
     "promise-toast"
   ],

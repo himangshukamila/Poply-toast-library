@@ -139,6 +139,6 @@ describe("ZNotify Toast integration", () => {
     });
 
     expect(screen.getByText("timed notification")).toBeTruthy();
-    expect(screen.getByTestId("poply-progress-track")).toBeTruthy();
+    expect(screen.getByTestId("shalua-progress-track")).toBeTruthy();
   });
 });

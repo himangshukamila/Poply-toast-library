@@ -115,7 +115,7 @@ function renderToastIcon(variant: ToastVariant, customIcon?: ReactNode): ReactNo
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
-          style={{ flexShrink: 0, animation: "poply-spin 1s linear infinite" }}
+          style={{ flexShrink: 0, animation: "shalua-spin 1s linear infinite" }}
         >
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
@@ -214,7 +214,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
       onMouseLeave={handleMouseLeave}
     >
       <style>{`
-        @keyframes poply-spin {
+        @keyframes shalua-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
@@ -273,7 +273,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
 
       {toast.progressBar && toast.duration !== Infinity && (
         <div
-          data-testid="poply-progress-track"
+          data-testid="shalua-progress-track"
           style={{
             position: "absolute",
             bottom: 0,

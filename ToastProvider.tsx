@@ -16,7 +16,7 @@ export const ToastContext = createContext<ToastContextValue | null>(null);
 let localIdCounter = 0;
 function generateId(): string {
   localIdCounter += 1;
-  return `poply-${Date.now()}-${localIdCounter}`;
+  return `shalua-${Date.now()}-${localIdCounter}`;
 }
 
 export function ToastProvider({

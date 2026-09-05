@@ -1,4 +1,4 @@
-# Poply
+# shalua
 
 A modern, lightweight, and zero-runtime-dependency toast notification library for React. Built with a sleek popover design aesthetic, animated countdown progress bars with synchronized pause-on-hover timers, async promise management, and strict CSS injection sanitization.
 
@@ -20,10 +20,8 @@ A modern, lightweight, and zero-runtime-dependency toast notification library fo
 ## Installation
 
 ```bash
-npm install poply
+npm install shalua
 ```
-
-*(or `react-poply` / your chosen package name)*
 
 ---
 
@@ -33,7 +31,7 @@ npm install poply
 
 ```tsx
 import React from "react";
-import { ToastProvider, ToastViewport, toast } from "poply";
+import { ToastProvider, ToastViewport, toast } from "shalua";
 
 export function App() {
   return (
@@ -59,7 +57,7 @@ function MainContent() {
 
 ### 1. Notification Variants & Descriptions
 
-Poply provides built-in variants with clean inline SVG icons:
+shalua provides built-in variants with clean inline SVG icons:
 
 ```tsx
 // success notification with secondary description
@@ -122,7 +120,7 @@ To enable the progress bar on all toasts by default:
 Track promises and update toasts in place from loading to success or failure:
 
 ```tsx
-import { toast } from "poply";
+import { toast } from "shalua";
 
 async function handleDeploy() {
   await toast.promise(
@@ -144,10 +142,10 @@ async function handleDeploy() {
 
 ### 4. Calling Outside React Components
 
-Because Poply uses a module-level imperative store, you can trigger toasts directly inside API utility files, event listeners, or Axios/Fetch interceptors:
+Because shalua uses a module-level imperative store, you can trigger toasts directly inside API utility files, event listeners, or Axios/Fetch interceptors:
 
 ```ts
-import { toast } from "poply";
+import { toast } from "shalua";
 
 export async function apiClient(endpoint: string, options?: RequestInit) {
   try {
@@ -196,7 +194,7 @@ toast.show("Custom announcement", {
 For programmatic access to active toast state or bulk operations inside components:
 
 ```tsx
-import { useToast } from "poply";
+import { useToast } from "shalua";
 
 function NotificationCenter() {
   const { toasts, dismiss, dismissAll } = useToast();
@@ -251,7 +249,7 @@ function NotificationCenter() {
 
 ## Security
 
-Poply validates all raw style string inputs (`background`, `backgroundGradient`, `backgroundImage`, `fontFamily`, `border`, `borderColor`, `boxShadow`, `progressColor`) against strict allowlists before applying them. Any values containing unsafe patterns (such as `javascript:`, `expression()`, `@import`, or `<script>`) are automatically and silently dropped to prevent CSS injection.
+shalua validates all raw style string inputs (`background`, `backgroundGradient`, `backgroundImage`, `fontFamily`, `border`, `borderColor`, `boxShadow`, `progressColor`) against strict allowlists before applying them. Any values containing unsafe patterns (such as `javascript:`, `expression()`, `@import`, or `<script>`) are automatically and silently dropped to prevent CSS injection.
 
 ---
 
