@@ -7,7 +7,16 @@ import type {
   ToastPosition,
   ToastOffsetOptions,
 } from "./types";
-import { registerToastHandlers } from "./toastStore";
+import {
+  devWarn,
+  registerToastHandlers,
+  unregisterToastHandlers,
+  type ToastHandlers,
+} from "./toastStore";
+
+// how long the exit transition runs before the record leaves the array.
+// shared with <Toast /> so the animation and the removal stay in sync.
+export const TOAST_EXIT_DURATION_MS = 200;
 
 export interface ToastContextValue {
   toasts: ToastRecord[];
@@ -31,6 +40,23 @@ function generateId(): string {
   return `ztoast-${Date.now()}-${localIdCounter}`;
 }
 
+// a non-finite or negative duration would make setTimeout fire immediately,
+// so anything that is not a usable number becomes "persist until dismissed".
+function normalizeDuration(value: unknown): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return Infinity;
+  if (!Number.isFinite(value)) return Infinity;
+  return Math.max(value, 0);
+}
+
+// consumer callbacks must never be able to break the toast lifecycle
+function safeInvoke(callback: () => void): void {
+  try {
+    callback();
+  } catch (error) {
+    devWarn(`onClose callback threw: ${String(error)}`);
+  }
+}
+
 export function ToastProvider({
   children,
   defaultPosition = "top-right",
@@ -44,58 +70,61 @@ export function ToastProvider({
   right,
 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
-  const timers = useRef<Map<string | number, ReturnType<typeof setTimeout>>>(new Map());
+  // pending "remove from the array once the exit animation finished" timers
   const exitTimers = useRef<Map<string | number, ReturnType<typeof setTimeout>>>(new Map());
+  // onClose callbacks live outside react state so they can be fired exactly
+  // once, from an event handler, instead of from inside a state updater
+  // (updaters run twice under StrictMode, which would double-fire them).
+  const closeCallbacks = useRef<Map<string | number, () => void>>(new Map());
 
-  const clearTimer = useCallback((id: string | number) => {
-    const t = timers.current.get(id);
-    if (t) {
-      clearTimeout(t);
-      timers.current.delete(id);
+  const clearExitTimer = useCallback((id: string | number) => {
+    const timer = exitTimers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      exitTimers.current.delete(id);
     }
   }, []);
 
   const remove = useCallback(
     (id: string | number) => {
-      clearTimer(id);
+      const onClose = closeCallbacks.current.get(id);
+      if (onClose) {
+        // delete before invoking so a re-entrant remove() cannot fire it twice
+        closeCallbacks.current.delete(id);
+        safeInvoke(onClose);
+      }
 
       // mark as leaving first to allow exit transition to play
-      setToasts((prev) =>
-        prev.map((t) => {
-          if (t.id === id) {
-            t.onClose?.();
-            return { ...t, isLeaving: true };
-          }
-          return t;
-        })
-      );
+      setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, isLeaving: true } : t)));
 
       // clean up any preexisting exit timer for this id
-      const existingExit = exitTimers.current.get(id);
-      if (existingExit) clearTimeout(existingExit);
+      clearExitTimer(id);
 
       // remove from array after exit transition finishes
       const exitTimer = setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
         exitTimers.current.delete(id);
-      }, 200);
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, TOAST_EXIT_DURATION_MS);
       exitTimers.current.set(id, exitTimer);
     },
-    [clearTimer]
+    [clearExitTimer]
   );
 
   const removeAll = useCallback(() => {
-    timers.current.forEach((t) => clearTimeout(t));
-    timers.current.clear();
-    exitTimers.current.forEach((t) => clearTimeout(t));
+    exitTimers.current.forEach((timer) => clearTimeout(timer));
     exitTimers.current.clear();
+
+    const callbacks = Array.from(closeCallbacks.current.values());
+    closeCallbacks.current.clear();
+    callbacks.forEach(safeInvoke);
+
     setToasts([]);
   }, []);
 
   const add = useCallback(
     (message: ReactNode, options: ToastOptions = {}) => {
       const id = options.id ?? generateId();
-      const duration = options.duration ?? defaultDuration;
+      const duration = normalizeDuration(options.duration ?? defaultDuration);
       const progressBar = options.progressBar ?? defaultProgressBar;
 
       const record: ToastRecord = {
@@ -135,31 +164,40 @@ export function ToastProvider({
         createdAt: Date.now(),
       };
 
+      // an id that is being re-used may still have a pending exit timer from a
+      // previous dismissal; letting it run would delete the toast we just added
+      clearExitTimer(id);
+
+      if (options.onClose) {
+        closeCallbacks.current.set(id, options.onClose);
+      } else {
+        closeCallbacks.current.delete(id);
+      }
+
       setToasts((prev) => {
         // replace an existing toast with the same id instead of duplicating
         const withoutExisting = prev.filter((t) => t.id !== id);
         return [...withoutExisting, record];
       });
 
-      clearTimer(id);
-      if (duration !== Infinity) {
-        const timer = setTimeout(() => remove(id), duration);
-        timers.current.set(id, timer);
-      }
-
+      // note: the auto-dismiss countdown is owned by <Toast />, which is the
+      // only place that knows about hover/focus pauses. running a second timer
+      // here would dismiss paused toasts behind the user's back.
       return id;
     },
-    [defaultDuration, defaultPosition, defaultProgressBar, clearTimer, remove]
+    [defaultDuration, defaultPosition, defaultProgressBar, clearExitTimer]
   );
 
   useEffect(() => {
-    registerToastHandlers({ add, remove, removeAll });
+    const api: ToastHandlers = { add, remove, removeAll };
+    registerToastHandlers(api);
+    const pendingExitTimers = exitTimers.current;
+    const pendingCallbacks = closeCallbacks.current;
     return () => {
-      registerToastHandlers(null);
-      timers.current.forEach((t) => clearTimeout(t));
-      timers.current.clear();
-      exitTimers.current.forEach((t) => clearTimeout(t));
-      exitTimers.current.clear();
+      unregisterToastHandlers(api);
+      pendingExitTimers.forEach((timer) => clearTimeout(timer));
+      pendingExitTimers.clear();
+      pendingCallbacks.clear();
     };
   }, [add, remove, removeAll]);
 

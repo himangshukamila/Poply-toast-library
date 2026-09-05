@@ -7,31 +7,12 @@ export interface ToasterProps extends Omit<ToastProviderProps, "children"> {
   children?: ReactNode;
 }
 
-// all-in-one toaster component for drop-in root placement
-export function Toaster({
-  children,
-  defaultPosition = "top-right",
-  defaultDuration = 4000,
-  defaultProgressBar = false,
-  gap = 12,
-  offset,
-  top,
-  bottom,
-  left,
-  right,
-}: ToasterProps) {
+// all-in-one toaster component for drop-in root placement.
+// every prop is forwarded untouched so the defaults live in exactly one place
+// (<ToastProvider />) and cannot drift between the two entry points.
+export function Toaster({ children, ...providerProps }: ToasterProps) {
   return (
-    <ToastProvider
-      defaultPosition={defaultPosition}
-      defaultDuration={defaultDuration}
-      defaultProgressBar={defaultProgressBar}
-      gap={gap}
-      offset={offset}
-      top={top}
-      bottom={bottom}
-      left={left}
-      right={right}
-    >
+    <ToastProvider {...providerProps}>
       {children}
       <ToastViewport />
     </ToastProvider>

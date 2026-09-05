@@ -145,3 +145,52 @@ describe("sanitizeBoxShadow", () => {
   });
 });
 
+describe("sanitizer hardening", () => {
+  it("rejects css escape sequences that smuggle blocked keywords", () => {
+    // "\6a avascript:" resolves to "javascript:" once the css parser unescapes it,
+    // which no plain substring check on the raw text can see
+    expect(sanitizeColor("\\6a avascript:alert(1)").rejected).toBe(true);
+    expect(sanitizeBackgroundImage("url('\\6a avascript:alert(1)')").rejected).toBe(true);
+    expect(sanitizeFontFamily("Ari\\61 l").rejected).toBe(true);
+  });
+
+  it("rejects unterminated comment markers", () => {
+    expect(sanitizeColor("red/*").rejected).toBe(true);
+    expect(sanitizeBoxShadow("0 0 2px #000 */").rejected).toBe(true);
+  });
+
+  it("rejects oversized values before any regex runs over them", () => {
+    expect(sanitizeBoxShadow(`0 0 ${"1".repeat(600)}px #000`).rejected).toBe(true);
+    expect(sanitizeTransform(`translate(${"1".repeat(600)}px)`).rejected).toBe(true);
+    expect(sanitizeFontFamily("a".repeat(300)).rejected).toBe(true);
+  });
+
+  it("rejects non string input coming from untyped javascript callers", () => {
+    expect(sanitizeColor({} as unknown as string).rejected).toBe(true);
+    expect(sanitizeGradient(123 as unknown as string).rejected).toBe(true);
+    expect(sanitizeDimension({} as unknown as string).rejected).toBe(true);
+  });
+});
+
+describe("sanitizeTransform tokenization", () => {
+  it("accepts a chain of transform functions", () => {
+    const result = sanitizeTransform("translate(-50%, -50%) scale(1.05)");
+    expect(result.rejected).toBe(false);
+    expect(result.value).toBe("translate(-50%, -50%) scale(1.05)");
+  });
+
+  it("rejects unknown functions, nesting, and trailing junk", () => {
+    expect(sanitizeTransform("url(https://example.com/x.png)").rejected).toBe(true);
+    expect(sanitizeTransform("translate(calc(10px))").rejected).toBe(true);
+    expect(sanitizeTransform("translateX(10px) evil").rejected).toBe(true);
+  });
+});
+
+describe("sanitizeBorderShorthand color segment", () => {
+  it("validates the color segment instead of accepting any trailing text", () => {
+    expect(sanitizeBorderShorthand("1px solid url(https://example.com/x.png)").rejected).toBe(true);
+    expect(sanitizeBorderShorthand("1px solid var(--brand)").rejected).toBe(false);
+    expect(sanitizeBorderShorthand("1px solid").value).toBe("1px solid");
+  });
+});
+

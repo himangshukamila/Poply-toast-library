@@ -3,6 +3,7 @@ import type { ReactNode, CSSProperties } from "react";
 import type { ToastRecord, ToastVariant } from "./types";
 import { resolveToastStyle } from "./resolveStyle";
 import { sanitizeColor } from "./sanitize";
+import { TOAST_EXIT_DURATION_MS } from "./ToastProvider";
 
 interface ToastProps {
   toast: ToastRecord;
@@ -133,53 +134,80 @@ function renderToastIcon(variant: ToastVariant, customIcon?: ReactNode): ReactNo
   }
 }
 
-// toast component with popover styling, pause-on-hover timer and progress bar
+// toast component with popover styling, pause-on-hover timer and progress bar.
+// this component owns the auto-dismiss countdown: it is the only place that
+// knows whether the user is currently hovering or focusing the toast.
 export function Toast({ toast, onDismiss }: ToastProps) {
-  const [remaining, setRemaining] = useState(toast.duration);
+  const { id, duration, createdAt, isLeaving } = toast;
+
+  const [remaining, setRemaining] = useState(duration);
   const [paused, setPaused] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
   const startRef = useRef<number>(Date.now());
+  // mirrors `paused` for the event handlers, which must not read stale state
+  // and must never subtract the same elapsed slice twice
+  const pausedRef = useRef(false);
+
+  const isTimed = Number.isFinite(duration);
+  const showProgress = toast.progressBar === true && isTimed;
+
+  // a toast can be replaced in place (same id, e.g. toast.promise going from
+  // loading to success). react keeps the same component instance, so the
+  // countdown has to be reset explicitly: otherwise the replacement inherits
+  // the previous remaining time and, if that was Infinity, never dismisses.
+  useEffect(() => {
+    startRef.current = Date.now();
+    pausedRef.current = false;
+    setRemaining(duration);
+    setPaused(false);
+    setProgressPercent(0);
+  }, [duration, createdAt]);
 
   // handles auto-dismiss timeout and pause-on-hover resumption
   useEffect(() => {
-    if (toast.duration === Infinity || remaining === Infinity || paused) return;
+    if (paused || isLeaving) return;
+    if (!Number.isFinite(remaining)) return;
 
     startRef.current = Date.now();
-    const timeout = setTimeout(() => onDismiss(toast.id), remaining);
+    const timeout = setTimeout(() => onDismiss(id), Math.max(remaining, 0));
 
     return () => clearTimeout(timeout);
-  }, [paused, remaining, toast.duration, toast.id, onDismiss]);
+    // createdAt is a dependency so that replacing a toast in place restarts the
+    // countdown even when the new record happens to have the same duration
+  }, [paused, remaining, isLeaving, id, createdAt, onDismiss]);
 
   // synchronizes progress bar animation with hover pauses
   useEffect(() => {
-    if (!toast.progressBar || toast.duration === Infinity || remaining === Infinity) return;
+    if (!showProgress || !Number.isFinite(remaining) || duration <= 0) return;
 
     if (paused) {
-      // freeze progress bar at current exact percentage when hovered
-      const elapsed = Date.now() - startRef.current;
-      const totalElapsed = toast.duration - remaining + elapsed;
-      const current = Math.min(Math.max((totalElapsed / toast.duration) * 100, 0), 100);
-      setProgressPercent(current);
-    } else {
-      // animate from current percentage to 100 percent over remaining time
-      const frameId = requestAnimationFrame(() => {
-        setProgressPercent(100);
-      });
-      return () => cancelAnimationFrame(frameId);
+      // `remaining` was already reduced by the elapsed slice when the pause
+      // started, so the consumed fraction follows directly from it. recomputing
+      // the elapsed time here would count that slice a second time and make the
+      // bar jump forward on hover.
+      const consumed = ((duration - remaining) / duration) * 100;
+      setProgressPercent(Math.min(Math.max(consumed, 0), 100));
+      return;
     }
-  }, [paused, remaining, toast.duration, toast.progressBar]);
 
-  const handleMouseEnter = useCallback(() => {
-    if (toast.duration === Infinity || remaining === Infinity) return;
+    // animate from the current percentage to 100 percent over the remaining time
+    const frameId = requestAnimationFrame(() => setProgressPercent(100));
+    return () => cancelAnimationFrame(frameId);
+  }, [paused, remaining, duration, showProgress]);
+
+  const pause = useCallback(() => {
+    if (!Number.isFinite(duration) || pausedRef.current) return;
+    pausedRef.current = true;
     const elapsed = Date.now() - startRef.current;
     setRemaining((prev) => Math.max(prev - elapsed, 0));
     setPaused(true);
-  }, [toast.duration, remaining]);
+  }, [duration]);
 
-  const handleMouseLeave = useCallback(() => {
-    if (toast.duration === Infinity || remaining === Infinity) return;
+  const resume = useCallback(() => {
+    if (!pausedRef.current) return;
+    pausedRef.current = false;
     setPaused(false);
-  }, [toast.duration, remaining]);
+  }, []);
 
   const accent = VARIANT_ACCENTS[toast.variant] ?? VARIANT_ACCENTS.default;
   const resolvedStyle = resolveToastStyle(toast);
@@ -203,23 +231,26 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     position: "relative",
     overflow: "hidden",
     boxSizing: "border-box",
-    transition: "transform 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease",
-    opacity: toast.isLeaving ? 0 : 1,
-    transform: toast.isLeaving ? "scale(0.95) translateY(6px)" : "scale(1) translateY(0)",
+    transition: `transform ${TOAST_EXIT_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${TOAST_EXIT_DURATION_MS}ms ease`,
+    opacity: isLeaving ? 0 : 1,
+    transform: isLeaving ? "scale(0.95) translateY(6px)" : "scale(1) translateY(0)",
     ...resolvedStyle,
   };
 
-  const sanitizedProgressColor = toast.progressColor
-    ? sanitizeColor(toast.progressColor).value
-    : accent.color;
+  const progressColor = sanitizeColor(toast.progressColor).value ?? accent.color;
 
   return (
     <div
       role={toast.variant === "error" ? "alert" : "status"}
       aria-live={toast.variant === "error" ? "assertive" : "polite"}
+      aria-atomic="true"
       style={containerStyle}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={pause}
+      onMouseLeave={resume}
+      // keyboard users never fire mouse events: focusing the dismiss button
+      // has to pause the countdown too, or the toast disappears mid-tab
+      onFocus={pause}
+      onBlur={resume}
     >
       {renderToastIcon(toast.variant, toast.icon)}
 
@@ -237,7 +268,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
       {toast.closable && (
         <button
           type="button"
-          onClick={() => onDismiss(toast.id)}
+          onClick={() => onDismiss(id)}
           aria-label="Dismiss notification"
           style={{
             background: "transparent",
@@ -272,7 +303,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
         </button>
       )}
 
-      {toast.progressBar && toast.duration !== Infinity && (
+      {showProgress && (
         <div
           data-testid="ztoast-progress-track"
           style={{
@@ -289,8 +320,8 @@ export function Toast({ toast, onDismiss }: ToastProps) {
             style={{
               height: "100%",
               width: `${progressPercent}%`,
-              background: sanitizedProgressColor || "#6366f1",
-              transition: paused ? "none" : `width ${remaining}ms linear`,
+              background: progressColor,
+              transition: paused ? "none" : `width ${Math.max(remaining, 0)}ms linear`,
             }}
           />
         </div>

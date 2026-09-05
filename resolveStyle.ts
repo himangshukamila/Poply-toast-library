@@ -8,7 +8,21 @@ import {
   sanitizeBorderShorthand,
   sanitizeDimension,
   sanitizeBoxShadow,
+  type SanitizeResult,
 } from "./sanitize";
+
+// applies a sanitized result onto the style object, skipping anything that was
+// rejected or absent. keeps every call site below to a single line.
+function apply(style: CSSProperties, key: keyof CSSProperties, result: SanitizeResult): void {
+  if (result.rejected || result.value === undefined) return;
+  (style as Record<string, string>)[key as string] = result.value;
+}
+
+// font-weight is either a finite number or a bare keyword such as "bold"
+function isSafeFontWeight(value: number | string): boolean {
+  if (typeof value === "number") return Number.isFinite(value);
+  return typeof value === "string" && /^[a-zA-Z0-9]{1,20}$/.test(value);
+}
 
 // resolves a toast style options object into a plain css properties object,
 // running every string valued field through the sanitizer first.
@@ -16,28 +30,16 @@ import {
 export function resolveToastStyle(options: ToastStyleOptions): CSSProperties {
   const style: CSSProperties = {};
 
-  const width = sanitizeDimension(options.width);
-  if (!width.rejected && width.value) style.width = width.value;
-
-  const height = sanitizeDimension(options.height);
-  if (!height.rejected && height.value) style.height = height.value;
-
-  const padding = sanitizeDimension(options.padding);
-  if (!padding.rejected && padding.value) style.padding = padding.value;
-
-  const borderRadius = sanitizeDimension(options.borderRadius);
-  if (!borderRadius.rejected && borderRadius.value) style.borderRadius = borderRadius.value;
-
-  const borderWidth = sanitizeDimension(options.borderWidth);
-  if (!borderWidth.rejected && borderWidth.value) style.borderWidth = borderWidth.value;
-
-  const fontSize = sanitizeDimension(options.fontSize);
-  if (!fontSize.rejected && fontSize.value) style.fontSize = fontSize.value;
+  apply(style, "width", sanitizeDimension(options.width));
+  apply(style, "height", sanitizeDimension(options.height));
+  apply(style, "padding", sanitizeDimension(options.padding));
+  apply(style, "borderRadius", sanitizeDimension(options.borderRadius));
+  apply(style, "borderWidth", sanitizeDimension(options.borderWidth));
+  apply(style, "fontSize", sanitizeDimension(options.fontSize));
 
   // background: gradient takes precedence over solid color if both given,
   // background image layers on top via the shorthand background property
   const gradient = sanitizeGradient(options.backgroundGradient);
-  const solidBg = sanitizeColor(options.background);
   const bgImage = sanitizeBackgroundImage(options.backgroundImage);
 
   const layers: string[] = [];
@@ -46,32 +48,20 @@ export function resolveToastStyle(options: ToastStyleOptions): CSSProperties {
   if (layers.length > 0) {
     style.backgroundImage = layers.join(", ");
   }
-  if (!solidBg.rejected && solidBg.value) {
-    style.backgroundColor = solidBg.value;
-  }
 
-  const textColor = sanitizeColor(options.textColor);
-  if (!textColor.rejected && textColor.value) style.color = textColor.value;
+  apply(style, "backgroundColor", sanitizeColor(options.background));
+  apply(style, "color", sanitizeColor(options.textColor));
+  apply(style, "fontFamily", sanitizeFontFamily(options.fontFamily));
 
-  const fontFamily = sanitizeFontFamily(options.fontFamily);
-  if (!fontFamily.rejected && fontFamily.value) style.fontFamily = fontFamily.value;
-
-  if (
-    options.fontWeight !== undefined &&
-    (typeof options.fontWeight === "number" ||
-      /^[a-zA-Z0-9]+$/.test(String(options.fontWeight)))
-  ) {
+  if (options.fontWeight !== undefined && isSafeFontWeight(options.fontWeight)) {
     style.fontWeight = options.fontWeight;
   }
 
-  const border = sanitizeBorderShorthand(options.border);
-  if (!border.rejected && border.value) style.border = border.value;
-
-  const borderColor = sanitizeColor(options.borderColor);
-  if (!borderColor.rejected && borderColor.value) style.borderColor = borderColor.value;
-
-  const boxShadow = sanitizeBoxShadow(options.boxShadow);
-  if (!boxShadow.rejected && boxShadow.value) style.boxShadow = boxShadow.value;
+  // order matters: the shorthand is written first so an explicit borderColor
+  // still wins over the colour baked into it
+  apply(style, "border", sanitizeBorderShorthand(options.border));
+  apply(style, "borderColor", sanitizeColor(options.borderColor));
+  apply(style, "boxShadow", sanitizeBoxShadow(options.boxShadow));
 
   return style;
 }

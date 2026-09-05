@@ -1,4 +1,5 @@
 export { ToastProvider } from "./ToastProvider";
+export type { ToastContextValue } from "./ToastProvider";
 export { ToastViewport } from "./ToastViewport";
 export { Toaster } from "./Toaster";
 export type { ToasterProps } from "./Toaster";
@@ -9,6 +10,7 @@ export type {
   ToastPosition,
   ToastVariant,
   ToastStyleOptions,
+  ToastOffsetOptions,
   ToastProviderProps,
   ToastRecord,
   PromiseToastMessages,

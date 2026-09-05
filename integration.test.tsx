@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
 import { ToastProvider, ToastViewport, Toaster, toast } from "./index";
 
+const wait = (ms: number) => act(async () => {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+});
+
 // integration tests for toast provider, viewport and imperative actions
-describe("ZNotify Toast integration", () => {
+describe("ztoast integration", () => {
   it("renders a toast with title and description", () => {
     render(
       <ToastProvider>
@@ -221,6 +225,95 @@ describe("ZNotify Toast integration", () => {
     const viewportContainer = toastElement.closest("div[style*='position: fixed']") as HTMLElement;
     expect(viewportContainer).toBeTruthy();
     expect(viewportContainer.style.top).toBe("30vh");
+  });
+
+  it("keeps a hovered toast alive until the pointer leaves", async () => {
+    render(<Toaster />);
+
+    act(() => {
+      toast.info("hover to keep me", { duration: 400 });
+    });
+
+    fireEvent.mouseEnter(screen.getByRole("status"));
+
+    // well past the original duration: the countdown must be frozen
+    await wait(700);
+    expect(screen.queryByText("hover to keep me")).not.toBeNull();
+
+    fireEvent.mouseLeave(screen.getByRole("status"));
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("hover to keep me")).toBeNull();
+      },
+      { timeout: 3000 }
+    );
+  });
+
+  it("auto-dismisses a toast that was replaced in place", async () => {
+    render(<Toaster />);
+
+    let resolveFn: (value: string) => void;
+    const pending = new Promise<string>((resolve) => {
+      resolveFn = resolve;
+    });
+
+    act(() => {
+      toast.promise(
+        pending,
+        { loading: "saving", success: "saved", error: "failed" },
+        { duration: 150 }
+      );
+    });
+
+    await act(async () => {
+      resolveFn!("ok");
+    });
+
+    // the loading toast was persistent; the success toast that replaced it
+    // must still honour its own finite duration
+    expect(screen.getByText("saved")).toBeTruthy();
+
+    await waitFor(
+      () => {
+        expect(screen.queryByText("saved")).toBeNull();
+      },
+      { timeout: 3000 }
+    );
+  });
+
+  it("fires onClose exactly once per dismissal", () => {
+    const onClose = vi.fn();
+    render(<Toaster />);
+
+    act(() => {
+      toast.show("closing soon", { id: "close-me", onClose, duration: Infinity });
+    });
+
+    act(() => {
+      toast.dismiss("close-me");
+      toast.dismiss("close-me");
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a toast that reuses a just dismissed id", async () => {
+    render(<Toaster />);
+
+    act(() => {
+      toast.show("first", { id: "reused", duration: Infinity });
+    });
+    act(() => {
+      toast.dismiss("reused");
+    });
+    act(() => {
+      toast.show("second", { id: "reused", duration: Infinity });
+    });
+
+    // the pending exit timer from the dismissal must not delete the new toast
+    await wait(400);
+    expect(screen.queryByText("second")).not.toBeNull();
   });
 });
 
