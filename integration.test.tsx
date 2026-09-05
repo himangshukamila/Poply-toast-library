@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
-import { ToastProvider, ToastViewport, toast } from "./index";
+import { ToastProvider, ToastViewport, Toaster, toast } from "./index";
 
 // integration tests for toast provider, viewport and imperative actions
 describe("ZNotify Toast integration", () => {
@@ -139,6 +139,21 @@ describe("ZNotify Toast integration", () => {
     });
 
     expect(screen.getByText("timed notification")).toBeTruthy();
+    expect(screen.getByTestId("shalua-progress-track")).toBeTruthy();
+  });
+
+  it("works with all-in-one Toaster component", () => {
+    render(
+      <div>
+        <Toaster defaultProgressBar={true} />
+      </div>
+    );
+
+    act(() => {
+      toast.success("using toaster component");
+    });
+
+    expect(screen.getByText("using toaster component")).toBeTruthy();
     expect(screen.getByTestId("shalua-progress-track")).toBeTruthy();
   });
 });

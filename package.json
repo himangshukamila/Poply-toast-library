@@ -1,6 +1,6 @@
 {
   "name": "shalua",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A modern, zero-runtime-dependency toast notification library for React with progress bars, popover themes, and CSS sanitization.",
   "type": "module",
   "main": "./dist/index.cjs",

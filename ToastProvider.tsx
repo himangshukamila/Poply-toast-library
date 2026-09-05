@@ -28,6 +28,7 @@ export function ToastProvider({
 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
   const timers = useRef<Map<string | number, ReturnType<typeof setTimeout>>>(new Map());
+  const exitTimers = useRef<Map<string | number, ReturnType<typeof setTimeout>>>(new Map());
 
   const clearTimer = useCallback((id: string | number) => {
     const t = timers.current.get(id);
@@ -40,6 +41,7 @@ export function ToastProvider({
   const remove = useCallback(
     (id: string | number) => {
       clearTimer(id);
+
       // mark as leaving first to allow exit transition to play
       setToasts((prev) =>
         prev.map((t) => {
@@ -51,10 +53,16 @@ export function ToastProvider({
         })
       );
 
+      // clean up any preexisting exit timer for this id
+      const existingExit = exitTimers.current.get(id);
+      if (existingExit) clearTimeout(existingExit);
+
       // remove from array after exit transition finishes
-      setTimeout(() => {
+      const exitTimer = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
+        exitTimers.current.delete(id);
       }, 200);
+      exitTimers.current.set(id, exitTimer);
     },
     [clearTimer]
   );
@@ -62,6 +70,8 @@ export function ToastProvider({
   const removeAll = useCallback(() => {
     timers.current.forEach((t) => clearTimeout(t));
     timers.current.clear();
+    exitTimers.current.forEach((t) => clearTimeout(t));
+    exitTimers.current.clear();
     setToasts([]);
   }, []);
 
@@ -103,8 +113,7 @@ export function ToastProvider({
       };
 
       setToasts((prev) => {
-        // replace an existing toast with the same id instead of duplicating,
-        // useful for the toast.promise() pattern (loading -> success/error)
+        // replace an existing toast with the same id instead of duplicating
         const withoutExisting = prev.filter((t) => t.id !== id);
         return [...withoutExisting, record];
       });
@@ -126,6 +135,8 @@ export function ToastProvider({
       registerToastHandlers(null);
       timers.current.forEach((t) => clearTimeout(t));
       timers.current.clear();
+      exitTimers.current.forEach((t) => clearTimeout(t));
+      exitTimers.current.clear();
     };
   }, [add, remove, removeAll]);
 

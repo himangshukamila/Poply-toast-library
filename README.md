@@ -27,18 +27,21 @@ npm install shalua
 
 ## Quick Start
 
-### 1. Wrap your app in `<ToastProvider>` and mount `<ToastViewport />`
+### 1. Add `<Toaster />` once at the root of your app
+
+You only need to mount `<Toaster />` **once** at the root of your app (e.g. `App.tsx`, `main.tsx`, or Next.js `layout.tsx`).
 
 ```tsx
 import React from "react";
-import { ToastProvider, ToastViewport, toast } from "shalua";
+import { Toaster, toast } from "shalua";
 
 export function App() {
   return (
-    <ToastProvider defaultPosition="top-right" defaultDuration={4000}>
+    <>
       <MainContent />
-      <ToastViewport />
-    </ToastProvider>
+      {/* mount once at root */}
+      <Toaster defaultPosition="top-right" defaultDuration={4000} defaultProgressBar={true} />
+    </>
   );
 }
 
@@ -50,6 +53,8 @@ function MainContent() {
   );
 }
 ```
+
+*(Alternatively, you can wrap your tree in `<ToastProvider><App /><ToastViewport /></ToastProvider>` if you prefer standard provider wrapping).*
 
 ---
 

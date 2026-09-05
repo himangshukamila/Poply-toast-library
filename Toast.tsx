@@ -115,9 +115,17 @@ function renderToastIcon(variant: ToastVariant, customIcon?: ReactNode): ReactNo
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden="true"
-          style={{ flexShrink: 0, animation: "shalua-spin 1s linear infinite" }}
+          style={{ flexShrink: 0 }}
         >
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 12 12"
+            to="360 12 12"
+            dur="1s"
+            repeatCount="indefinite"
+          />
         </svg>
       );
     default:
@@ -213,13 +221,6 @@ export function Toast({ toast, onDismiss }: ToastProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <style>{`
-        @keyframes shalua-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-
       {renderToastIcon(toast.variant, toast.icon)}
 
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "3px" }}>

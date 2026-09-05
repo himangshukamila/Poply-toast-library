@@ -11,11 +11,12 @@ import {
 
 // testing css sanitizer validators and injection defense
 describe("sanitizeColor", () => {
-  it("allows safe hex, rgb, hsl, var, and named colors", () => {
+  it("allows safe hex, rgb, hsl, oklch, var, and named colors", () => {
     expect(sanitizeColor("#fff").rejected).toBe(false);
     expect(sanitizeColor("#1f2937").rejected).toBe(false);
     expect(sanitizeColor("rgba(0, 0, 0, 0.5)").rejected).toBe(false);
     expect(sanitizeColor("hsla(200, 50%, 50%, 0.8)").rejected).toBe(false);
+    expect(sanitizeColor("oklch(0.6 0.25 150)").rejected).toBe(false);
     expect(sanitizeColor("var(--brand-color)").rejected).toBe(false);
     expect(sanitizeColor("red").rejected).toBe(false);
   });
@@ -26,6 +27,10 @@ describe("sanitizeColor", () => {
     expect(sanitizeColor("expression(alert(1))").rejected).toBe(true);
     expect(sanitizeColor("<script>alert(1)</script>").rejected).toBe(true);
     expect(sanitizeColor("/*comment*/javascript:alert(1)").rejected).toBe(true);
+    expect(sanitizeColor("/*/*nested*/*/javascript:alert(1)").rejected).toBe(true);
+    expect(sanitizeColor("red; background: black").rejected).toBe(true);
+    expect(sanitizeColor("red} body { background: black").rejected).toBe(true);
+    expect(sanitizeColor("eval(alert(1))").rejected).toBe(true);
   });
 });
 
@@ -47,6 +52,7 @@ describe("sanitizeGradient", () => {
       sanitizeGradient("linear-gradient(url(javascript:alert(1)))").rejected
     ).toBe(true);
     expect(sanitizeGradient("@import url('evil.css')").rejected).toBe(true);
+    expect(sanitizeGradient("linear-gradient(red, blue); background: evil").rejected).toBe(true);
   });
 });
 
@@ -78,6 +84,7 @@ describe("sanitizeFontFamily", () => {
   it("rejects suspicious font family strings", () => {
     expect(sanitizeFontFamily("javascript:evil").rejected).toBe(true);
     expect(sanitizeFontFamily("</style><script>alert(1)</script>").rejected).toBe(true);
+    expect(sanitizeFontFamily("Arial; color: red").rejected).toBe(true);
   });
 });
 
@@ -90,6 +97,7 @@ describe("sanitizeBorderShorthand", () => {
 
   it("rejects invalid border values", () => {
     expect(sanitizeBorderShorthand("javascript:alert(1)").rejected).toBe(true);
+    expect(sanitizeBorderShorthand("1px solid red; evil: 1").rejected).toBe(true);
   });
 });
 
@@ -101,6 +109,7 @@ describe("sanitizeDimension", () => {
     expect(sanitizeDimension("auto").value).toBe("auto");
     expect(sanitizeDimension(NaN).rejected).toBe(true);
     expect(sanitizeDimension("100vw").rejected).toBe(false);
+    expect(sanitizeDimension("100px; color: red").rejected).toBe(true);
   });
 });
 
@@ -113,5 +122,6 @@ describe("sanitizeBoxShadow", () => {
   it("rejects expressions and injection in shadows", () => {
     expect(sanitizeBoxShadow("expression(alert(1))").rejected).toBe(true);
     expect(sanitizeBoxShadow("behavior:url(evil.htc)").rejected).toBe(true);
+    expect(sanitizeBoxShadow("0 4px 12px #000; color: red").rejected).toBe(true);
   });
 });
